@@ -96,5 +96,5 @@ if "_LIBCPP_HAS_THREAD_API_PTHREAD" in sdk_macros:
 if "__cpp_sized_deallocation" in sdk_macros:
     config.available_features.add("has-sized-deallocation")
 if sourceBuilds(config, "#include <functional>\nint main() { std::function<void()> f; }",
-                additionalFlags=["-std=c++03"]):
+                ["-std=c++03"]):
     config.available_features.add("cxx03-std-function")

@@ -362,6 +362,24 @@
      A* x = new A[3];
      assert(0 == unsized_delete_called);
      assert(0 == unsized_delete_nothrow_called);
+--- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/new_align_val_t_nothrow_replace.pass.cpp
++++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/new_align_val_t_nothrow_replace.pass.cpp
+@@ -72,6 +72,7 @@
+ {
+     {
+         A* ap = new (std::nothrow) A;
++        DoNotOptimize(ap);
+         assert(ap);
+         assert(A_constructed);
+         ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called);
+@@ -81,6 +82,7 @@
+     }
+     {
+         B* bp = new (std::nothrow) B;
++        DoNotOptimize(bp);
+         assert(bp);
+         assert(B_constructed);
+         ASSERT_WITH_OPERATOR_NEW_FALLBACKS(!new_called);
 --- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp
 +++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp
 @@ -10,9 +10,8 @@
