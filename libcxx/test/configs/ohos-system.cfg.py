@@ -8,6 +8,7 @@ libcxx/test and libcxx/utils; no headers or runtime libraries are taken from it.
 import importlib.util
 import os
 from pathlib import Path
+import re
 import shlex
 import sys
 
@@ -89,7 +90,7 @@ configure(libcxx.test.params.DEFAULT_PARAMETERS, libcxx.test.features.DEFAULT_FE
 # SDK15 selects pthread in __config rather than its generated __config_site.
 # The old feature probe includes only __config_site and otherwise skips two
 # usable pthread interoperability tests.
-from libcxx.test.dsl import compilerMacros, sourceBuilds
+from libcxx.test.dsl import compilerMacros, programSucceeds, sourceBuilds
 sdk_macros = compilerMacros(config, flags="-include __config")
 if "_LIBCPP_HAS_THREAD_API_PTHREAD" in sdk_macros:
     config.available_features.add("libcpp-has-thread-api-pthread")
@@ -98,3 +99,16 @@ if "__cpp_sized_deallocation" in sdk_macros:
 if sourceBuilds(config, "#include <functional>\nint main() { std::function<void()> f; }",
                 ["-std=c++03"]):
     config.available_features.add("cxx03-std-function")
+# setlocale() accepting an alias does not establish that the ROM's C++ facets
+# support the exact name selected by platform_support.h.
+for locale in libcxx.test.features.locales:
+    feature = "locale." + locale
+    if feature not in config.available_features:
+        continue
+    macro = "LOCALE_" + re.sub(r"[.-]", "_", locale)
+    probe = """#include <locale>
+#include "platform_support.h"
+int main() { try { std::locale l(%s); return 0; } catch (...) { return 1; } }
+""" % macro
+    if not programSucceeds(config, probe):
+        config.available_features.remove(feature)
