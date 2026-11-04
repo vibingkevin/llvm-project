@@ -49,3 +49,31 @@ hdc -t "$OHOS_TEST_DEVICE" shell "chmod 755 '$OHOS_TEST_RUN_AS'"
 `-Werror` 自测应单独传 `--param=enable_warnings=True`；这两项要求编译失败，属于 host 驱动自测，不是设备失败。C++03/C++11 function ABI 演示例先探测 SDK 是否提供 C++03 std::function，避免把前置 API 缺失冒充预期运行时 ABI 错误。线程 API 及 sized deletion 特征从实际 SDK 宏探测，不沿用旧编译器假设。
 
 本轮不构建 LLVM21 libc++、sanitizer 或其他新的设备 runtime；这些库自身的测试不能替代对 ROM 库的验证。C++20/23、debug libc++、实验扩展及非 AArch64 用例按明确的配置/架构要求另列，不计入当前 setup 的真机覆盖。
+
+## 本轮 O3 结果与真实限制
+
+2026-11-04，JB LLVM21 `c2e420df942a21f93c15248b4fb9259737fa58c1`，Command Line Tools Clang15.0.4 / SDK26，HarmonyOS 6.1.0.120、API24 的 AArch64 真机：
+
+| 组 | 总数 | PASS | FAIL | UNSUPPORTED | XFAIL |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| SDK15 libc++ 运行型及运行 shell 用例 | 6452 | 5100 | 26 | 1319 | 7 |
+| libc++abi | 71 | 57 | 1 | 13 | 0 |
+| libunwind | 12 | 6 | 5 | 1 | 0 |
+| SDK15 builtins | 220 | 142 | 2 | 76 | 0 |
+
+libunwind 的 6 个 PASS 中有 1 个仅编译，其他 PASS 均有目标程序设备执行记录。libc++ 的 7 个 XFAIL 中，5 个在 host 验证编译/链接预期错误，2 个在设备触发预期运行失败。编译期 static_assert 仍在 host 判断；程序实际执行不等于每个断言都在运行时判断。测试 timeit/fpcmp、lit 判定及输出比较也在 host。
+
+不能据此宣称原 setup 完全兼容：
+
+- `condition_variable/wait_until.pass.cpp` 暴露 ROM 的时钟状态问题。同一 pthread 条件变量先调用 `pthread_cond_clockwait(CLOCK_MONOTONIC)`，内部偏移 16 的字段从 0 变成 1；随后 realtime 截止时间的 `pthread_cond_timedwait` 不结束。新条件变量直接 realtime 等待正常。Clang15/21 均复现；ROM 反汇编显示 `str w8, [x0, #0x10]` 后直接跳转 `pthread_cond_timedwait`，没有恢复原时钟。保留 FAIL，不更换条件变量或跳过该阶段掩盖问题。
+- 其余 25 个 libc++ FAIL 在相同 ROM 上用 SDK15 编译也失败：locale 初始化/访问的分配计数、错误消息与错误类别、C locale 宽字符行为、排序和货币格式、`+nan` 文本。它们不是本次 LLVM21 新增回归，也不能记为成功。
+- builtins 的 `divsc3` 对分母 `inf + i*sNaN`（sNaN 位型 `0x7f800001`）返回 NaN 而非零；`multf3` 边界舍入实际末尾 `…fffb`，期望 `…fffc`。两套编译器结果相同，属于所用 SDK archive 的既有数值缺陷。
+- libc++abi 缺 `pthread_cancel` 声明；libunwind 5 项缺 SDK 未提供的 `libunwind.h` / `__libunwind_config.h`，未补入另一版本公开头伪装通过。其他排除项逐项来自 C++17、实验/debug/无异常配置、locale、CPU 架构或 archive 的实际成员要求。
+
+locale 可用性同时探测 `platform_support.h` 中的实际名称能否构造 ROM 的 C++ `std::locale`。仅 `setlocale()` 接受别名不够：11 个捷克语正则用例经两套编译器同机失败确认后判为不支持。能构造但格式断言失败的英语、中文 locale 没有被禁用。
+
+C++03/C++11 `std::function` ABI 演示例按测试需求启用 SDK 已有的 `_LIBCPP_ENABLE_CXX03_FUNCTION` 宏，已在设备触发原来预期的 `x == 42` 断言错误。它的 XFAIL 不是由前置编译错误代替。
+
+`libcxx/utils/ohos-clockwait-repro.c` 是上述 ROM 时钟问题的独立复现，使用与 ohos-run-as.c 相同的目标/SDK/链接参数并加 `-lpthread` 编译。无参数应正常超时并退出 0；传任意参数会先作单调时钟等待，再作实时时钟等待，受影响 ROM 上后一步不结束，运行时须用外部 `timeout`。无需部署任何 SDK 共享库。
+
+配套 test-suite 的 O3 2029 项结果、两个 NEON 构建失败及 FMV 支持缺口，见 `vibingkevin/llvm-test-suite` 的 `test/ohos-rom-compat` 分支。这里的结果仅覆盖记录的 setup 和 ROM，不包含整个 LLVM host 回归测试或新 runtime 的质量验证。

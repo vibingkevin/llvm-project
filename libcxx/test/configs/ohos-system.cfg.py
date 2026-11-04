@@ -97,7 +97,7 @@ if "_LIBCPP_HAS_THREAD_API_PTHREAD" in sdk_macros:
 if "__cpp_sized_deallocation" in sdk_macros:
     config.available_features.add("has-sized-deallocation")
 if sourceBuilds(config, "#include <functional>\nint main() { std::function<void()> f; }",
-                ["-std=c++03"]):
+                ["-std=c++03", "-D_LIBCPP_ENABLE_CXX03_FUNCTION"]):
     config.available_features.add("cxx03-std-function")
 # setlocale() accepting an alias does not establish that the ROM's C++ facets
 # support the exact name selected by platform_support.h.

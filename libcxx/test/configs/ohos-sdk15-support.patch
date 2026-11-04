@@ -115,11 +115,12 @@
  #include <cstdlib>
 --- a/libcxx/test/libcxx/utilities/function.objects/abi_bug_cxx03_cxx11_example.sh.cpp
 +++ b/libcxx/test/libcxx/utilities/function.objects/abi_bug_cxx03_cxx11_example.sh.cpp
-@@ -7,6 +7,7 @@
+@@ -7,6 +7,8 @@
  //===----------------------------------------------------------------------===//
  
  // REQUIRES: clang || apple-clang
 +// REQUIRES: cxx03-std-function
++// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX03_FUNCTION
  // XFAIL: *
  
  // This tests is meant to demonstrate an existing ABI bug between the
@@ -513,6 +514,55 @@
      int ok;
      {
          std::locale loc;
+--- a/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.alg/swap.pass.cpp
++++ b/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.alg/swap.pass.cpp
+@@ -1,3 +1,4 @@
++// ADDITIONAL_COMPILE_FLAGS: -fno-assume-sane-operator-new
+ //===----------------------------------------------------------------------===//
+ //
+ // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+--- a/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.con/F.pass.cpp
++++ b/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.con/F.pass.cpp
+@@ -1,3 +1,4 @@
++// ADDITIONAL_COMPILE_FLAGS: -fno-assume-sane-operator-new
+ //===----------------------------------------------------------------------===//
+ //
+ // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+--- a/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.con/copy_assign.pass.cpp
++++ b/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.con/copy_assign.pass.cpp
+@@ -1,3 +1,4 @@
++// ADDITIONAL_COMPILE_FLAGS: -fno-assume-sane-operator-new
+ //===----------------------------------------------------------------------===//
+ //
+ // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+--- a/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.con/copy_move.pass.cpp
++++ b/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.con/copy_move.pass.cpp
+@@ -1,3 +1,4 @@
++// ADDITIONAL_COMPILE_FLAGS: -fno-assume-sane-operator-new
+ //===----------------------------------------------------------------------===//
+ //
+ // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+--- a/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.con/nullptr_t_assign.pass.cpp
++++ b/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.con/nullptr_t_assign.pass.cpp
+@@ -1,3 +1,4 @@
++// ADDITIONAL_COMPILE_FLAGS: -fno-assume-sane-operator-new
+ //===----------------------------------------------------------------------===//
+ //
+ // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+--- a/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.mod/swap.pass.cpp
++++ b/libcxx/test/std/utilities/function.objects/func.wrap/func.wrap.func/func.wrap.func.mod/swap.pass.cpp
+@@ -1,3 +1,4 @@
++// ADDITIONAL_COMPILE_FLAGS: -fno-assume-sane-operator-new
+ //===----------------------------------------------------------------------===//
+ //
+ // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+--- a/libcxx/test/std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.create/make_shared.pass.cpp
++++ b/libcxx/test/std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.create/make_shared.pass.cpp
+@@ -1,3 +1,4 @@
++// ADDITIONAL_COMPILE_FLAGS: -fno-assume-sane-operator-new
+ //===----------------------------------------------------------------------===//
+ //
+ // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 --- a/libcxx/test/support/locale_helpers.h
 +++ b/libcxx/test/support/locale_helpers.h
 @@ -45,7 +45,7 @@
