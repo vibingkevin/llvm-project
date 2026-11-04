@@ -5,7 +5,7 @@
 #include <float.h>
 #include <stdio.h>
 
-#if defined(CRT_HAS_128BIT) && HAS_80_BIT_LONG_DOUBLE
+#if defined(CRT_HAS_128BIT)
 
 // Returns: convert a to a float, rounding toward even.
 
@@ -37,7 +37,7 @@ COMPILE_TIME_ASSERT(sizeof(float)*CHAR_BIT == 32);
 
 int main()
 {
-#if defined(CRT_HAS_128BIT) && HAS_80_BIT_LONG_DOUBLE
+#if defined(CRT_HAS_128BIT)
     if (test__floatuntisf(0, 0.0F))
         return 1;
 

@@ -1,5 +1,6 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_trampoline_setup
+// UNSUPPORTED: clang
 
 #include <stdio.h>
 #include <string.h>

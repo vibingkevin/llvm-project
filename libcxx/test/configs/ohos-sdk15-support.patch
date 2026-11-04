@@ -1,0 +1,570 @@
+--- a/libcxx/test/libcxx/language.support/support.dynamic/libcpp_deallocate.sh.cpp
++++ b/libcxx/test/libcxx/language.support/support.dynamic/libcpp_deallocate.sh.cpp
+@@ -23,6 +23,8 @@
+ // GCC doesn't support the aligned-allocation flags.
+ // XFAIL: gcc
+ 
++// ADDITIONAL_COMPILE_FLAGS: -fno-assume-sane-operator-new
++
+ // RUN: %{build} -faligned-allocation -fsized-deallocation
+ // RUN: %{run}
+ // RUN: %{build} -faligned-allocation -fno-sized-deallocation -DNO_SIZE
+@@ -125,6 +127,7 @@
+ 
+ void test_libcpp_dealloc() {
+   void* p = nullptr;
++  DoNotOptimize(p); // Exercise replacement calls under optimization.
+ #ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
+   size_t over_align_val = __STDCPP_DEFAULT_NEW_ALIGNMENT__ * 2;
+ #else
+@@ -186,12 +189,14 @@
+ #if defined(NO_SIZE) && defined(NO_ALIGN)
+   {
+     int* x = new int(42);
+-    delete x;
+-    assert(stats.expect_plain());
+-  }
+-  stats.reset();
+-  {
+-    AlignedType* a = new AlignedType();
++    DoNotOptimize(x);
++    delete x;
++    assert(stats.expect_plain());
++  }
++  stats.reset();
++  {
++    AlignedType* a = new AlignedType();
++    DoNotOptimize(a);
+     delete a;
+     assert(stats.expect_plain());
+   }
+@@ -201,13 +206,15 @@
+ #if TEST_STD_VER >= 11
+   {
+     int* x = new int(42);
+-    delete x;
+-    assert(stats.expect_plain());
+-  }
+-#endif
+-  stats.reset();
+-  {
+-    AlignedType* a = new AlignedType();
++    DoNotOptimize(x);
++    delete x;
++    assert(stats.expect_plain());
++  }
++#endif
++  stats.reset();
++  {
++    AlignedType* a = new AlignedType();
++    DoNotOptimize(a);
+     delete a;
+     assert(stats.expect_align(TEST_ALIGNOF(AlignedType)));
+   }
+@@ -216,12 +223,14 @@
+   stats.reset();
+   {
+     int* x = new int(42);
++    DoNotOptimize(x);
+     delete x;
+     assert(stats.expect_size(sizeof(int)));
+   }
+   stats.reset();
+   {
+     AlignedType* a = new AlignedType();
++    DoNotOptimize(a);
+     delete a;
+     assert(stats.expect_size(sizeof(AlignedType)));
+   }
+@@ -230,12 +239,14 @@
+   stats.reset();
+   {
+     int* x = new int(42);
++    DoNotOptimize(x);
+     delete x;
+     assert(stats.expect_size(sizeof(int)));
+   }
+   stats.reset();
+   {
+     AlignedType* a = new AlignedType();
++    DoNotOptimize(a);
+     delete a;
+     assert(stats.expect_size_align(sizeof(AlignedType),
+                                    TEST_ALIGNOF(AlignedType)));
+@@ -245,6 +256,10 @@
+ }
+ 
+ int main(int, char**) {
++#ifdef __OHOS__
++  // ROM initialization can call replacement operators before main.
++  stats.reset();
++#endif
+   test_libcpp_dealloc();
+   test_allocator_and_new_match();
+ 
+--- a/libcxx/test/libcxx/selftest/remote-substitutions.sh.cpp
++++ b/libcxx/test/libcxx/selftest/remote-substitutions.sh.cpp
+@@ -17,7 +17,7 @@
+ 
+ // RUN: %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe
+ // RUN: %{exec} %t.exe 0
+-// RUN: %{exec} bash -c '! %t.exe 1'
++// RUN: %{exec} sh -c '! "$1" 1' sh %t.exe
+ 
+ #include <cassert>
+ #include <cstdlib>
+--- a/libcxx/test/libcxx/utilities/function.objects/abi_bug_cxx03_cxx11_example.sh.cpp
++++ b/libcxx/test/libcxx/utilities/function.objects/abi_bug_cxx03_cxx11_example.sh.cpp
+@@ -7,6 +7,7 @@
+ //===----------------------------------------------------------------------===//
+ 
+ // REQUIRES: clang || apple-clang
++// REQUIRES: cxx03-std-function
+ // XFAIL: *
+ 
+ // This tests is meant to demonstrate an existing ABI bug between the
+--- a/libcxx/test/std/input.output/filesystems/class.path/path.member/path.assign/move.pass.cpp
++++ b/libcxx/test/std/input.output/filesystems/class.path/path.member/path.assign/move.pass.cpp
+@@ -17,6 +17,9 @@
+ #include "filesystem_include.h"
+ #include <cassert>
+ #include <string>
++// Observe replacement allocation calls even with optimization enabled.
++// ADDITIONAL_COMPILE_FLAGS: -fno-assume-sane-operator-new
++
+ #include <type_traits>
+ 
+ #include "test_macros.h"
+@@ -24,6 +27,10 @@
+ 
+ 
+ int main(int, char**) {
++#ifdef __OHOS__
++  // Ignore allocations by ROM initialization before the operation under test.
++  globalMemCounter.reset();
++#endif
+   using namespace fs;
+   static_assert(std::is_nothrow_move_assignable<path>::value, "");
+   assert(globalMemCounter.checkOutstandingNewEq(0));
+--- a/libcxx/test/std/input.output/filesystems/class.path/path.member/path.construct/move.pass.cpp
++++ b/libcxx/test/std/input.output/filesystems/class.path/path.member/path.construct/move.pass.cpp
+@@ -17,6 +17,9 @@
+ #include "filesystem_include.h"
+ #include <cassert>
+ #include <string>
++// Observe replacement allocation calls even with optimization enabled.
++// ADDITIONAL_COMPILE_FLAGS: -fno-assume-sane-operator-new
++
+ #include <type_traits>
+ 
+ #include "test_macros.h"
+@@ -24,6 +27,10 @@
+ 
+ 
+ int main(int, char**) {
++#ifdef __OHOS__
++  // Ignore allocations by ROM initialization before the operation under test.
++  globalMemCounter.reset();
++#endif
+   using namespace fs;
+   static_assert(std::is_nothrow_move_constructible<path>::value, "");
+   assert(globalMemCounter.checkOutstandingNewEq(0));
+--- a/libcxx/test/std/input.output/iostream.objects/check-stderr.sh
++++ b/libcxx/test/std/input.output/iostream.objects/check-stderr.sh
+@@ -1,4 +1,4 @@
+ program=${1}
+ expected_stderr=${2}
+-${program} 2>stderr.log >stdout.log
+-[ "${expected_stderr}" == "$(cat stderr.log)" ]
++"${program}" 2>stderr.log >stdout.log || exit $?
++[ "${expected_stderr}" = "$(cat stderr.log)" ]
+--- a/libcxx/test/std/input.output/iostream.objects/check-stdout.sh
++++ b/libcxx/test/std/input.output/iostream.objects/check-stdout.sh
+@@ -1,4 +1,4 @@
+ program=${1}
+ expected_stdout=${2}
+-${program} 2>stderr.log >stdout.log
+-[ "${expected_stdout}" == "$(cat stdout.log)" ]
++"${program}" 2>stderr.log >stdout.log || exit $?
++[ "${expected_stdout}" = "$(cat stdout.log)" ]
+--- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp
+@@ -10,10 +10,9 @@
+ 
+ // istream cerr;
+ 
+-// UNSUPPORTED: executor-has-no-bash
+ // FILE_DEPENDENCIES: ../check-stderr.sh
+ // RUN: %{build}
+-// RUN: %{exec} bash check-stderr.sh "%t.exe" "1234"
++// RUN: %{exec} sh check-stderr.sh "%t.exe" "1234"
+ 
+ #include <iostream>
+ #include <cassert>
+--- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cin.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cin.sh.cpp
+@@ -10,10 +10,9 @@
+ 
+ // istream cin;
+ 
+-// UNSUPPORTED: executor-has-no-bash
+ // FILE_DEPENDENCIES: ../send-stdin.sh
+ // RUN: %{build}
+-// RUN: %{exec} bash send-stdin.sh "%t.exe" "1234"
++// RUN: %{exec} sh send-stdin.sh "%t.exe" "1234"
+ 
+ #include <iostream>
+ #include <cassert>
+--- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp
+@@ -10,10 +10,9 @@
+ 
+ // istream clog;
+ 
+-// UNSUPPORTED: executor-has-no-bash
+ // FILE_DEPENDENCIES: ../check-stderr.sh
+ // RUN: %{build}
+-// RUN: %{exec} bash check-stderr.sh "%t.exe" "1234"
++// RUN: %{exec} sh check-stderr.sh "%t.exe" "1234"
+ 
+ #include <iostream>
+ 
+--- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cout.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cout.sh.cpp
+@@ -10,10 +10,9 @@
+ 
+ // istream cout;
+ 
+-// UNSUPPORTED: executor-has-no-bash
+ // FILE_DEPENDENCIES: ../check-stdout.sh
+ // RUN: %{build}
+-// RUN: %{exec} bash check-stdout.sh "%t.exe" "1234"
++// RUN: %{exec} sh check-stdout.sh "%t.exe" "1234"
+ 
+ #include <iostream>
+ 
+--- a/libcxx/test/std/input.output/iostream.objects/send-stdin.sh
++++ b/libcxx/test/std/input.output/iostream.objects/send-stdin.sh
+@@ -1,3 +1,3 @@
+ program=${1}
+ input=${2}
+-echo -n ${input} | ${program}
++printf %s "${input}" | "${program}"
+--- a/libcxx/test/std/input.output/iostream.objects/wide.stream.objects/wcerr.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/wide.stream.objects/wcerr.sh.cpp
+@@ -12,10 +12,9 @@
+ 
+ // XFAIL: no-wide-characters
+ 
+-// UNSUPPORTED: executor-has-no-bash
+ // FILE_DEPENDENCIES: ../check-stderr.sh
+ // RUN: %{build}
+-// RUN: %{exec} bash check-stderr.sh "%t.exe" "1234"
++// RUN: %{exec} sh check-stderr.sh "%t.exe" "1234"
+ 
+ #include <iostream>
+ #include <cassert>
+--- a/libcxx/test/std/input.output/iostream.objects/wide.stream.objects/wcin.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/wide.stream.objects/wcin.sh.cpp
+@@ -12,10 +12,9 @@
+ 
+ // XFAIL: no-wide-characters
+ 
+-// UNSUPPORTED: executor-has-no-bash
+ // FILE_DEPENDENCIES: ../send-stdin.sh
+ // RUN: %{build}
+-// RUN: %{exec} bash send-stdin.sh "%t.exe" "1234"
++// RUN: %{exec} sh send-stdin.sh "%t.exe" "1234"
+ 
+ #include <iostream>
+ #include <cassert>
+--- a/libcxx/test/std/input.output/iostream.objects/wide.stream.objects/wclog.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/wide.stream.objects/wclog.sh.cpp
+@@ -12,10 +12,9 @@
+ 
+ // XFAIL: no-wide-characters
+ 
+-// UNSUPPORTED: executor-has-no-bash
+ // FILE_DEPENDENCIES: ../check-stderr.sh
+ // RUN: %{build}
+-// RUN: %{exec} bash check-stderr.sh "%t.exe" "1234"
++// RUN: %{exec} sh check-stderr.sh "%t.exe" "1234"
+ 
+ #include <iostream>
+ 
+--- a/libcxx/test/std/input.output/iostream.objects/wide.stream.objects/wcout.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/wide.stream.objects/wcout.sh.cpp
+@@ -12,10 +12,9 @@
+ 
+ // XFAIL: no-wide-characters
+ 
+-// UNSUPPORTED: executor-has-no-bash
+ // FILE_DEPENDENCIES: ../check-stdout.sh
+ // RUN: %{build}
+-// RUN: %{exec} bash check-stdout.sh "%t.exe" "1234"
++// RUN: %{exec} sh check-stdout.sh "%t.exe" "1234"
+ 
+ #include <iostream>
+ 
+--- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array14.pass.cpp
++++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array14.pass.cpp
+@@ -10,9 +10,8 @@
+ 
+ // UNSUPPORTED: sanitizer-new-delete, c++03, c++11
+ 
+-// NOTE: Clang does not enable sized-deallocation in C++14 and beyond by
+-// default. It is only enabled when -fsized-deallocation is given.
+-// XFAIL: clang, apple-clang
++// Probe the compiler default: newer Clang versions enable sized deletion.
++// XFAIL: !has-sized-deallocation
+ 
+ #include <new>
+ #include <cstddef>
+@@ -56,6 +55,12 @@
+ 
+ int main(int, char**)
+ {
++#ifdef __OHOS__
++  // Ignore allocations by ROM initialization before the operation under test.
++  unsized_delete_called = 0;
++  unsized_delete_nothrow_called = 0;
++  sized_delete_called = 0;
++#endif
+     A* x = new A[3];
+     assert(0 == unsized_delete_called);
+     assert(0 == unsized_delete_nothrow_called);
+--- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array_calls_unsized_delete_array.pass.cpp
++++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array_calls_unsized_delete_array.pass.cpp
+@@ -47,6 +47,11 @@
+ 
+ int main(int, char**)
+ {
++#ifdef __OHOS__
++  // Ignore allocations by ROM initialization before the operation under test.
++  delete_called = 0;
++  delete_nothrow_called = 0;
++#endif
+     A *x = new A[3];
+     DoNotOptimize(x);
+     assert(0 == delete_called);
+--- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array_fsizeddeallocation.pass.cpp
++++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array_fsizeddeallocation.pass.cpp
+@@ -67,6 +67,12 @@
+ 
+ int main(int, char**)
+ {
++#ifdef __OHOS__
++  // Ignore allocations by ROM initialization before the operation under test.
++  unsized_delete_called = 0;
++  unsized_delete_nothrow_called = 0;
++  sized_delete_called = 0;
++#endif
+     A* x = new A[3];
+     assert(0 == unsized_delete_called);
+     assert(0 == unsized_delete_nothrow_called);
+--- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp
++++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp
+@@ -10,9 +10,8 @@
+ 
+ // UNSUPPORTED: sanitizer-new-delete, c++03, c++11
+ 
+-// NOTE: Clang does not enable sized-deallocation in C++14 and beyond by
+-// default. It is only enabled when -fsized-deallocation is given.
+-// XFAIL: clang, apple-clang
++// Probe the compiler default: newer Clang versions enable sized deletion.
++// XFAIL: !has-sized-deallocation
+ 
+ #include <new>
+ #include <cstddef>
+@@ -45,6 +44,12 @@
+ 
+ int main(int, char**)
+ {
++#ifdef __OHOS__
++  // Ignore allocations by ROM initialization before the operation under test.
++  unsized_delete_called = 0;
++  unsized_delete_nothrow_called = 0;
++  sized_delete_called = 0;
++#endif
+     int *x = new int(42);
+     DoNotOptimize(x);
+     assert(0 == unsized_delete_called);
+--- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete_calls_unsized_delete.pass.cpp
++++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete_calls_unsized_delete.pass.cpp
+@@ -36,6 +36,11 @@
+ 
+ int main(int, char**)
+ {
++#ifdef __OHOS__
++  // Ignore allocations by ROM initialization before the operation under test.
++  delete_called = 0;
++  delete_nothrow_called = 0;
++#endif
+     int *x = new int(42);
+     DoNotOptimize(x);
+     assert(0 == delete_called);
+--- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete_fsizeddeallocation.pass.cpp
++++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete_fsizeddeallocation.pass.cpp
+@@ -56,6 +56,12 @@
+ 
+ int main(int, char**)
+ {
++#ifdef __OHOS__
++  // Ignore allocations by ROM initialization before the operation under test.
++  unsized_delete_called = 0;
++  unsized_delete_nothrow_called = 0;
++  sized_delete_called = 0;
++#endif
+     int *x = new int(42);
+     DoNotOptimize(x);
+     assert(0 == sized_delete_called);
+--- a/libcxx/test/std/localization/locale.categories/category.ctype/facet.ctype.special/facet.ctype.char.dtor/dtor.pass.cpp
++++ b/libcxx/test/std/localization/locale.categories/category.ctype/facet.ctype.special/facet.ctype.char.dtor/dtor.pass.cpp
+@@ -21,6 +21,10 @@
+ 
+ int main(int, char**)
+ {
++#ifdef __OHOS__
++  // Ignore allocations by ROM initialization before the operation under test.
++  globalMemCounter.reset();
++#endif
+     {
+         std::locale l(std::locale::classic(), new std::ctype<char>);
+         assert(globalMemCounter.checkDeleteArrayCalledEq(0));
+--- a/libcxx/test/std/localization/locale.categories/category.monetary/locale.moneypunct.byname/decimal_point.pass.cpp
++++ b/libcxx/test/std/localization/locale.categories/category.monetary/locale.moneypunct.byname/decimal_point.pass.cpp
+@@ -119,7 +119,7 @@
+ 
+ // GLIBC 2.23 uses '.' as the decimal point while other C libraries use ','
+ // GLIBC 2.27 corrects this
+-#if defined(_CS_GNU_LIBC_VERSION)
++#if defined(__GLIBC__)
+     const char sep = glibc_version_less_than("2.27") ? '.' : ',';
+ #   ifndef TEST_HAS_NO_WIDE_CHARACTERS
+     const wchar_t wsep = glibc_version_less_than("2.27") ? L'.' : L',';
+--- a/libcxx/test/std/localization/locale.categories/category.monetary/locale.moneypunct.byname/thousands_sep.pass.cpp
++++ b/libcxx/test/std/localization/locale.categories/category.monetary/locale.moneypunct.byname/thousands_sep.pass.cpp
+@@ -110,7 +110,7 @@
+     }
+     // The below tests work around GLIBC's use of U202F as mon_thousands_sep.
+ #ifndef TEST_HAS_NO_WIDE_CHARACTERS
+-#if defined(_CS_GNU_LIBC_VERSION)
++#if defined(__GLIBC__)
+     const wchar_t fr_sep = glibc_version_less_than("2.27") ? L' ' : L'\u202F';
+ #elif defined(_WIN32)
+     const wchar_t fr_sep = L'\u00A0';
+@@ -142,7 +142,7 @@
+     // and U002E as mon_decimal_point.
+     // TODO: Fix thousands_sep for 'char'.
+     // related to https://gcc.gnu.org/bugzilla/show_bug.cgi?id=16006
+-#   if defined(_CS_GNU_LIBC_VERSION)
++#   if defined(__GLIBC__)
+     // FIXME libc++ specifically works around \u00A0 by translating it into
+     // a regular space.
+     const wchar_t wsep = glibc_version_less_than("2.27") ? L'\u00A0' : L'\u202F';
+--- a/libcxx/test/std/localization/locale.categories/facet.numpunct/locale.numpunct.byname/thousands_sep.pass.cpp
++++ b/libcxx/test/std/localization/locale.categories/facet.numpunct/locale.numpunct.byname/thousands_sep.pass.cpp
+@@ -63,7 +63,7 @@
+         // The below tests work around GLIBC's use of U202F as LC_NUMERIC thousands_sep.
+         std::locale l(LOCALE_fr_FR_UTF_8);
+         {
+-#if defined(_CS_GNU_LIBC_VERSION) || defined(_WIN32)
++#if defined(__GLIBC__) || defined(_WIN32)
+             const char sep = ' ';
+ #else
+             const char sep = ',';
+@@ -74,7 +74,7 @@
+         }
+ #ifndef TEST_HAS_NO_WIDE_CHARACTERS
+         {
+-#if defined(_CS_GNU_LIBC_VERSION)
++#if defined(__GLIBC__)
+             const wchar_t wsep = glibc_version_less_than("2.27") ? L' ' : L'\u202f';
+ #elif defined(_WIN32)
+             const wchar_t wsep = L'\u00A0';
+--- a/libcxx/test/std/localization/locales/locale/locale.cons/default.pass.cpp
++++ b/libcxx/test/std/localization/locales/locale/locale.cons/default.pass.cpp
+@@ -66,6 +66,10 @@
+ 
+ int main(int, char**)
+ {
++#ifdef __OHOS__
++    // Count the locale operations below, excluding ROM startup allocation.
++    globalMemCounter.reset();
++#endif
+     int ok;
+     {
+         std::locale loc;
+--- a/libcxx/test/support/locale_helpers.h
++++ b/libcxx/test/support/locale_helpers.h
+@@ -45,7 +45,7 @@
+ // be. FreeBSD's locale data also uses U+202F, since 2018.
+ // Windows uses U+00A0 NO-BREAK SPACE.
+ std::wstring convert_thousands_sep_fr_FR(std::wstring const& in) {
+-#if defined(_CS_GNU_LIBC_VERSION)
++#if defined(__GLIBC__)
+   if (glibc_version_less_than("2.27"))
+     return in;
+   else
+@@ -90,7 +90,7 @@
+ }
+ 
+ MultiStringType currency_symbol_ru_RU() {
+-#if defined(_CS_GNU_LIBC_VERSION)
++#if defined(__GLIBC__)
+   if (glibc_version_less_than("2.24"))
+     return MKSTR("\u0440\u0443\u0431");
+   else
+--- a/libcxx/test/support/platform_support.h
++++ b/libcxx/test/support/platform_support.h
+@@ -47,7 +47,7 @@
+ #   include <unistd.h> // close
+ #endif
+ 
+-#if defined(_CS_GNU_LIBC_VERSION)
++#if defined(__GLIBC__)
+ # include <string.h> // strverscmp
+ #endif
+ 
+@@ -97,7 +97,7 @@
+ #endif // _LIBCPP_HAS_OPEN_WITH_WCHAR
+ _LIBCPP_SUPPRESS_DEPRECATED_POP
+ 
+-#if defined(_CS_GNU_LIBC_VERSION)
++#if defined(__GLIBC__)
+ inline bool glibc_version_less_than(char const* version) {
+   std::string test_version = std::string("glibc ") + version;
+ 
+--- a/libcxx/utils/libcxx/test/dsl.py
++++ b/libcxx/utils/libcxx/test/dsl.py
+@@ -91,7 +91,7 @@
+     params={})
+   _, tmpBase = libcxx.test.format._getTempPaths(test)
+   execDir = os.path.dirname(test.getExecPath())
+-  res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, parsedCommands, execDir)
++  res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, parsedCommands, execDir, debug=False)
+   if isinstance(res, lit.Test.Result): # Handle failure to parse the Lit test
+     res = ('', res.output, 127, None)
+   (out, err, exitCode, timeoutInfo) = res
+--- a/libunwind/test/libunwind_02.pass.cpp
++++ b/libunwind/test/libunwind_02.pass.cpp
+@@ -9,6 +9,8 @@
+ 
+ // TODO: Figure out why this fails with Memory Sanitizer.
+ // XFAIL: msan
++// Preserve the recursive frames that this test counts, including under -O3.
++// ADDITIONAL_COMPILE_FLAGS: -fno-inline -fno-optimize-sibling-calls
+ 
+ #include <assert.h>
+ #include <stdlib.h>
+--- a/libunwind/test/unwind_leaffunction.pass.cpp
++++ b/libunwind/test/unwind_leaffunction.pass.cpp
+@@ -28,7 +28,7 @@
+   Dl_info info = { 0, 0, 0, 0 };
+ 
+   // Unwind util the main is reached, above frames deeped on the platfrom and architecture.
+-  if (dladdr(reinterpret_cast<void *>(_Unwind_GetIP(ctx)), &info) &&
++  if (dladdr(reinterpret_cast<void *>(_Unwind_GetIP(ctx) - 1), &info) &&
+       info.dli_sname && !strcmp("main", info.dli_sname)) {
+     _Exit(0);
+   }

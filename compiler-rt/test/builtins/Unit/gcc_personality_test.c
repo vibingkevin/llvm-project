@@ -1,6 +1,6 @@
-// FIXME: UNSUPPORTED as currently it cannot be built by lit properly.
-// UNSUPPORTED: true
-// RUN: %clangxx_builtins %s %librt -o %t && %run %t
+// RUN: %clang_builtins -fexceptions -c %s -o %t.o
+// RUN: %clangxx_builtins %S/gcc_personality_test_helper.cxx %t.o %librt -o %t
+// RUN: %run %t
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -9,8 +9,8 @@ extern void foo_clean(void* x);
 extern void bar_clean(void* x);
 extern void register_foo_local(int* x);
 extern void register_bar_local(int* x);
-extern void done_foo();
-extern void done_bar();
+extern void done_foo(void);
+extern void done_bar(void);
 
 
 /*
