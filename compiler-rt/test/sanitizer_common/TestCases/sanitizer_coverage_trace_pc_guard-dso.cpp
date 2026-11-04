@@ -12,7 +12,7 @@
 // RUN: %clangxx -DSHARED1 -O0 -fsanitize-coverage=trace-pc-guard -shared %s -o %t_1.so -fPIC
 // RUN: %clangxx -DSHARED2 -O0 -fsanitize-coverage=trace-pc-guard -shared %s -o %t_2.so -fPIC
 // RUN: %clangxx -DMAIN -O0 -fsanitize-coverage=trace-pc-guard %s -o %t %t_1.so %t_2.so
-// RUN: %env_tool_opts=coverage=1 %t 2>&1 | FileCheck %s
+// RUN: %env_tool_opts=coverage=1 %run %t 2>&1 | FileCheck %s
 // RUN: %sancovcc  -covered-functions -strip_path_prefix=TestCases/ *.sancov \
 // RUN:            %t %t_1.so %t_2.so 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-SANCOV %s

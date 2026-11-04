@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import shlex
+import subprocess
 import sys
 
 sdk = Path(os.environ["OHOS_SDK"])
@@ -43,11 +44,16 @@ config.recursiveExpansionLimit = 10
 headers = sdk / "llvm/include/libcxx-ohos/include/c++/v1"
 libs = sdk / "llvm/lib/aarch64-linux-ohos"
 common = ["--target=aarch64-unknown-linux-ohos", "--sysroot=" + str(sdk / "sysroot"),
-          "-B" + str(sdk / "llvm/bin"), "-fPIC", "-fno-stack-protector",
-          "-resource-dir=" + str(sdk / "llvm/lib/clang/15.0.4")]
+          "-B" + str(sdk / "llvm/bin"), "-fPIC", "-fno-stack-protector"]
+cxx = os.environ.get("OHOS_TEST_CXX", str(llvm / "bin/clang++"))
+intrinsics = Path(subprocess.check_output([cxx, "-print-resource-dir"], text=True).strip()) / "include"
 compile_flags = ["-O3", "-nostdinc++", "-isystem", str(headers),
+                 "-nobuiltininc", "-isystem", str(intrinsics),
                  "-I" + str(source / "libcxx/test/support")]
-link_flags = ["--ld-path=" + str(llvm / "bin/ld.lld"), "-L" + str(libs), "-lc++", "-lpthread"]
+# lit may compile and link in one driver call: explicit intrinsic headers keep
+# the link-only SDK resource selection from changing the compilation headers.
+link_flags = ["-resource-dir=" + str(sdk / "llvm/lib/clang/15.0.4"),
+              "--ld-path=" + str(llvm / "bin/ld.lld"), "-L" + str(libs), "-lc++", "-lpthread"]
 if suite == "libcxxabi":
     compile_flags += ["-D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS",
                       "-I" + str(source / "libcxx/src")]
@@ -61,7 +67,7 @@ executor = [sys.executable, str(project / "libcxx/utils/hdc.py"),
 if "OHOS_TEST_UID" in os.environ:
     executor += ["--uid", os.environ["OHOS_TEST_UID"], "--run-as", os.environ["OHOS_TEST_RUN_AS"]]
 config.substitutions += [
-    ("%{cxx}", shlex.quote(os.environ.get("OHOS_TEST_CXX", str(llvm / "bin/clang++")))),
+    ("%{cxx}", shlex.quote(cxx)),
     ("%{flags}", shlex.join(common)),
     ("%{compile_flags}", shlex.join(compile_flags)),
     ("%{link_flags}", shlex.join(link_flags)),
@@ -87,6 +93,8 @@ lit_config.params.setdefault("using_system_stdlib", "True")
 lit_config.params.setdefault("use_system_cxx_lib", "True")
 configure(libcxx.test.params.DEFAULT_PARAMETERS, libcxx.test.features.DEFAULT_FEATURES,
           config, lit_config)
+# A host GDB with Python cannot launch an AArch64 OHOS inferior locally.
+config.available_features.discard("host-has-gdb-with-python")
 # SDK15 selects pthread in __config rather than its generated __config_site.
 # The old feature probe includes only __config_site and otherwise skips two
 # usable pthread interoperability tests.

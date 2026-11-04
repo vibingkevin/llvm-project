@@ -970,6 +970,8 @@ else:
 
 
 def target_page_size():
+    if getattr(config, "target_page_size", None) is not None:
+        return config.target_page_size
     try:
         proc = subprocess.Popen(
             f"{emulator or ''} python3",

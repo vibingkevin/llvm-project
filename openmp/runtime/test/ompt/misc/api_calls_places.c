@@ -1,4 +1,4 @@
-// RUN: %libomp-compile && env OMP_PLACES=cores %libomp-run | FileCheck %s
+// RUN: %libomp-compile -D_GNU_SOURCE && env OMP_PLACES=cores %libomp-run | FileCheck %s
 // REQUIRES: ompt, linux
 #include "callback.h"
 #include <omp.h>

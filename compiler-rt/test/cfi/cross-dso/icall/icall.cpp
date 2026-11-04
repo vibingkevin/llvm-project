@@ -1,8 +1,8 @@
 // RUN: %clangxx_cfi_dso -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
-// RUN: %clangxx_cfi_dso %s -o %t %ld_flags_rpath_exe && %expect_crash %t 2>&1 | FileCheck %s
+// RUN: %clangxx_cfi_dso %s -o %t %ld_flags_rpath_exe && %expect_crash %run %t 2>&1 | FileCheck %s
 
 // RUN: %clangxx_cfi_dso_diag -g -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
-// RUN: %clangxx_cfi_dso_diag -g %s -o %t %ld_flags_rpath_exe && %t 2>&1 | FileCheck %s --check-prefix=CFI-DIAG
+// RUN: %clangxx_cfi_dso_diag -g %s -o %t %ld_flags_rpath_exe && %run %t 2>&1 | FileCheck %s --check-prefix=CFI-DIAG
 
 #include <stdio.h>
 

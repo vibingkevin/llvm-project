@@ -26,7 +26,8 @@ config.compiler_rt_libdir = str(libdir)
 config.compiler_rt_src_root = str(project / "compiler-rt")
 config.builtins_lit_source_dir = str(project / "compiler-rt/test/builtins/Unit")
 config.target_suffix = ""
-config.clang = str(llvm / "bin/clang")
+config.clang = os.environ.get("OHOS_TEST_CC", str(llvm / "bin/clang"))
+intrinsics = Path(subprocess.check_output([config.clang, "-print-resource-dir"], text=True).strip()) / "include"
 config.cxx_mode_flags = ["--driver-mode=g++", "-nostdinc++", "-isystem",
                          str(sdk / "llvm/include/libcxx-ohos/include/c++/v1")]
 config.debug_info_flags = ["-g"]
@@ -35,6 +36,7 @@ config.emulator = "hdc"
 config.target_cflags = shlex.join([
     "--target=aarch64-unknown-linux-ohos", "--sysroot=" + str(sdk / "sysroot"),
     "-B" + str(sdk / "llvm/bin"), "-O3", "-fPIC", "-fno-stack-protector",
+    "-nobuiltininc", "-isystem", str(intrinsics),
     "-resource-dir=" + str(resource), "--ld-path=" + str(llvm / "bin/ld.lld"),
     "-L" + str(sdk / "llvm/lib/aarch64-linux-ohos"), "-lc++", "-lpthread", "-DCOMPILER_RT_HAS_FLOAT16"])
 members = subprocess.check_output([str(llvm / "bin/llvm-ar"), "t", str(archive)], text=True)

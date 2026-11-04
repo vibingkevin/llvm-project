@@ -1,4 +1,4 @@
-// RUN: %clangxx %s -o %t && %run not %t 1 2>&1 | FileCheck %s
+// RUN: %clangxx %s -o %t && not %run %t 1 2>&1 | FileCheck %s
 // UNSUPPORTED: lsan,ubsan,android
 
 // FIXME: Implement.

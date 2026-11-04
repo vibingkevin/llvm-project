@@ -1,10 +1,10 @@
 // RUN: rm -f %t.profraw
 // RUN: touch %t.profraw
 // RUN: %clang_profgen -o %t %s
-// RUN: %t %t.profraw
-// RUN: %t %t.profraw modifyfile
+// RUN: %run %t %t.profraw
+// RUN: %run %t %t.profraw modifyfile
 // RUN: cp %t.profraw %t.profraw.old
-// RUN: %t %t.profraw 2>&1 | FileCheck %s
+// RUN: %run %t %t.profraw 2>&1 | FileCheck %s
 // RUN: diff %t.profraw %t.profraw.old
 // CHECK: Invalid profile data to merge
 

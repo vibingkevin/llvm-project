@@ -1,12 +1,12 @@
 // RUN: %clangxx_cfi_dso_diag -std=c++11 %s -o %t
-// RUN: %t zero 2>&1 | FileCheck --check-prefix=CHECK-ZERO %s
-// RUN: %t unaddressable 2>&1 | FileCheck --check-prefix=CHECK-UNADDR %s
-// RUN: %t 2>&1 | FileCheck --check-prefix=CHECK-TYPEINFO %s
+// RUN: %run %t zero 2>&1 | FileCheck --check-prefix=CHECK-ZERO %s
+// RUN: %run %t unaddressable 2>&1 | FileCheck --check-prefix=CHECK-UNADDR %s
+// RUN: %run %t 2>&1 | FileCheck --check-prefix=CHECK-TYPEINFO %s
 
 // RUN: %clangxx_cfi_diag -std=c++11 %s -o %t2
-// RUN: %t2 zero 2>&1 | FileCheck --check-prefix=CHECK-ZERO %s
-// RUN: %t2 unaddressable 2>&1 | FileCheck --check-prefix=CHECK-UNADDR %s
-// RUN: %t2 2>&1 | FileCheck --check-prefix=CHECK-TYPEINFO %s
+// RUN: %run %t2 zero 2>&1 | FileCheck --check-prefix=CHECK-ZERO %s
+// RUN: %run %t2 unaddressable 2>&1 | FileCheck --check-prefix=CHECK-UNADDR %s
+// RUN: %run %t2 2>&1 | FileCheck --check-prefix=CHECK-TYPEINFO %s
 
 // REQUIRES: cxxabi
 

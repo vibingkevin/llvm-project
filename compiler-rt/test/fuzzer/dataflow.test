@@ -13,7 +13,7 @@ RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize
 RUN: %cpp_compiler %S/ThreeFunctionsTest.cpp -o %t-ThreeFunctionsTest
 
 # Dump the function list.
-RUN:  %t-ThreeFunctionsTestDF 2>&1 | FileCheck %s --check-prefix=FUNC_LIST
+RUN:  %run %t-ThreeFunctionsTestDF 2>&1 | FileCheck %s --check-prefix=FUNC_LIST
 FUNC_LIST-DAG: LLVMFuzzerTestOneInput
 FUNC_LIST-DAG: Func1
 FUNC_LIST-DAG: Func2
@@ -99,12 +99,12 @@ L20_FUZZM-NOT: F
 
 # Don't crash with missing data_flow args.
 RUN: rm -rf %t-DFT
-RUN: %t-ThreeFunctionsTest -collect_data_flow=%t-ThreeFunctionsTestDF
-RUN: %t-ThreeFunctionsTest -data_flow_trace=%t-DFT %t/IN/FUZZMU
+RUN: %run %t-ThreeFunctionsTest -collect_data_flow=%t-ThreeFunctionsTestDF
+RUN: %run %t-ThreeFunctionsTest -data_flow_trace=%t-DFT %t/IN/FUZZMU
 
 # Test libFuzzer's built in DFT collection.
 RUN: rm -rf %t-DFT
-RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t-DFT %t/IN/FUZZMU
+RUN: %run %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t-DFT %t/IN/FUZZMU
 RUN: cat %t-DFT/* | sort | FileCheck %s --check-prefix=IN_FUZZMU
 
 IN_FUZZMU: F0 111100
@@ -113,8 +113,8 @@ IN_FUZZMU: F2 000001
 
 # Test that we can run collect_data_flow on the entire corpus dir
 RUN: rm -rf %t/OUT
-RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN
-RUN: %t-ThreeFunctionsTest -data_flow_trace=%t/OUT -runs=0 -focus_function=Func2 %t/IN 2>&1 | FileCheck %s --check-prefix=USE_DATA_FLOW_TRACE
+RUN: %run %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN
+RUN: %run %t-ThreeFunctionsTest -data_flow_trace=%t/OUT -runs=0 -focus_function=Func2 %t/IN 2>&1 | FileCheck %s --check-prefix=USE_DATA_FLOW_TRACE
 
 USE_DATA_FLOW_TRACE: INFO: DataFlowTrace: reading from {{.*}}/OUT
 USE_DATA_FLOW_TRACE: d28cb407e8e1a702c72d25473f0553d3ec172262 => |000001|
@@ -127,11 +127,11 @@ USE_DATA_FLOW_TRACE: INFO: 1/2 inputs have the Data Flow Trace
 # Test that we can run collect_data_flow on a long input (>2**16 bytes)
 RUN: printf "%0.sA" {1..150001} > %t/IN/very_long_input
 RUN: rm -rf %t/OUT
-RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN/very_long_input
+RUN: %run %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN/very_long_input
 RUN: rm %t/IN/very_long_input
 
 # Test that it fails explicitly when an empty corpus is provided.
 RUN: rm -rf %t/IN && mkdir %t/IN
-RUN: not %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN 2>&1 | FileCheck %s --check-prefix=EMPTY_CORPUS
+RUN: not %run %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t/OUT %t/IN 2>&1 | FileCheck %s --check-prefix=EMPTY_CORPUS
 
 EMPTY_CORPUS: ERROR: can't collect data flow without corpus provided

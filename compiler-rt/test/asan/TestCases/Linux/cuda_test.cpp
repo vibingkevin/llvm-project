@@ -5,7 +5,7 @@
 //
 // RUN: %clangxx_asan %s -o %t
 // RUN: not %env_asan_opts=protect_shadow_gap=1 %t 2>&1 | FileCheck %s  --check-prefix=CHECK-PROTECT1
-// RUN: not                                     %t 2>&1 | FileCheck %s  --check-prefix=CHECK-PROTECT1
+// RUN: not                                     %run %t 2>&1 | FileCheck %s  --check-prefix=CHECK-PROTECT1
 // RUN: not %env_asan_opts=protect_shadow_gap=0 %t 2>&1 | FileCheck %s  --check-prefix=CHECK-PROTECT0
 #include <assert.h>
 #include <unistd.h>

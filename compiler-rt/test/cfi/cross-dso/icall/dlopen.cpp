@@ -1,41 +1,41 @@
 // RUN: %clangxx_cfi_dso -DSHARED_LIB %s -fPIC -shared -o %t1-so.so
 // RUN: %clangxx_cfi_dso %s -o %t1
-// RUN: %expect_crash %t1 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t1 cast 2>&1 | FileCheck --check-prefix=CFI-CAST %s
-// RUN: %expect_crash %t1 dlclose 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t1 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t1 cast 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %expect_crash %run %t1 dlclose 2>&1 | FileCheck --check-prefix=CFI %s
 
 // RUN: %clangxx_cfi_dso -DB32 -DSHARED_LIB %s -fPIC -shared -o %t2-so.so
 // RUN: %clangxx_cfi_dso -DB32 %s -o %t2
-// RUN: %expect_crash %t2 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t2 cast 2>&1 | FileCheck --check-prefix=CFI-CAST %s
-// RUN: %expect_crash %t2 dlclose 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t2 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t2 cast 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %expect_crash %run %t2 dlclose 2>&1 | FileCheck --check-prefix=CFI %s
 
 // RUN: %clangxx_cfi_dso -DB64 -DSHARED_LIB %s -fPIC -shared -o %t3-so.so
 // RUN: %clangxx_cfi_dso -DB64 %s -o %t3
-// RUN: %expect_crash %t3 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t3 cast 2>&1 | FileCheck --check-prefix=CFI-CAST %s
-// RUN: %expect_crash %t3 dlclose 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t3 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t3 cast 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %expect_crash %run %t3 dlclose 2>&1 | FileCheck --check-prefix=CFI %s
 
 // RUN: %clangxx_cfi_dso -DBM -DSHARED_LIB %s -fPIC -shared -o %t4-so.so
 // RUN: %clangxx_cfi_dso -DBM %s -o %t4
-// RUN: %expect_crash %t4 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t4 cast 2>&1 | FileCheck --check-prefix=CFI-CAST %s
-// RUN: %expect_crash %t4 dlclose 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t4 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t4 cast 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %expect_crash %run %t4 dlclose 2>&1 | FileCheck --check-prefix=CFI %s
 
 // RUN: %clangxx -g -DBM -DSHARED_LIB -DNOCFI %s -fPIC -shared -o %t5-so.so
 // RUN: %clangxx -g -DBM -DNOCFI %s -ldl -o %t5
-// RUN: %t5 2>&1 | FileCheck --check-prefix=NCFI %s
-// RUN: %t5 cast 2>&1 | FileCheck --check-prefix=NCFI %s
-// RUN: %t5 dlclose 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %run %t5 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %run %t5 cast 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %run %t5 dlclose 2>&1 | FileCheck --check-prefix=NCFI %s
 
 // Test that calls to uninstrumented library are unchecked.
 // RUN: %clangxx -DBM -DSHARED_LIB %s -fPIC -shared -o %t6-so.so
 // RUN: %clangxx_cfi_dso -DBM %s -o %t6
-// RUN: %t6 2>&1 | FileCheck --check-prefix=NCFI %s
-// RUN: %t6 cast 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %run %t6 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %run %t6 cast 2>&1 | FileCheck --check-prefix=NCFI %s
 
 // Call-after-dlclose is checked on the caller side.
-// RUN: %expect_crash %t6 dlclose 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t6 dlclose 2>&1 | FileCheck --check-prefix=CFI %s
 
 // Tests calls into dlopen-ed library.
 // REQUIRES: cxxabi

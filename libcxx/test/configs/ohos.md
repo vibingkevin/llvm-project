@@ -16,7 +16,7 @@ lit_config.load_config(config, "/absolute/llvm-project/libcxx/test/configs/ohos-
 
 ```sh
 python3 "$LLVM_SOURCE/llvm/utils/lit/lit.py" -v -j4 \
-  --filter='\.pass\.cpp$' --filter-out='\.(compile|link)\.pass\.cpp$' \
+  --filter='\.pass\.cpp$|\.sh\.cpp$' --filter-out='\.(compile|link)\.pass\.cpp$' \
   -o "$OHOS_TEST_BUILD/results.json" "$OHOS_TEST_BUILD"
 ```
 
@@ -50,7 +50,7 @@ hdc -t "$OHOS_TEST_DEVICE" shell "chmod 755 '$OHOS_TEST_RUN_AS'"
 
 本轮不构建 LLVM21 libc++、sanitizer 或其他新的设备 runtime；这些库自身的测试不能替代对 ROM 库的验证。C++20/23、debug libc++、实验扩展及非 AArch64 用例按明确的配置/架构要求另列，不计入当前 setup 的真机覆盖。
 
-## 本轮 O3 结果与真实限制
+## 历史 helper 路径 O3 结果与真实限制
 
 2026-11-04，JB LLVM21 `c2e420df942a21f93c15248b4fb9259737fa58c1`，Command Line Tools Clang15.0.4 / SDK26，HarmonyOS 6.1.0.120、API24 的 AArch64 真机：
 
@@ -77,3 +77,33 @@ C++03/C++11 `std::function` ABI 演示例按测试需求启用 SDK 已有的 `_L
 `libcxx/utils/ohos-clockwait-repro.c` 是上述 ROM 时钟问题的独立复现，使用与 ohos-run-as.c 相同的目标/SDK/链接参数并加 `-lpthread` 编译。无参数应正常超时并退出 0；传任意参数会先作单调时钟等待，再作实时时钟等待，受影响 ROM 上后一步不结束，运行时须用外部 `timeout`。无需部署任何 SDK 共享库。
 
 配套 test-suite 的 O3 2029 项结果、两个 NEON 构建失败及 FMV 支持缺口，见 `vibingkevin/llvm-test-suite` 的 `test/ohos-rom-compat` 分支。这里的结果仅覆盖记录的 setup 和 ROM，不包含整个 LLVM host 回归测试或新 runtime 的质量验证。
+
+## 普通 Kotlin 编译路径
+
+与固定 Kotlin 分支的普通 `ClangArgs.Native` 一致，编译使用 LLVM21 自带 intrinsic 头，系统和 libc++ 头取 Command Line Tools SDK15；链接 resource-dir 取 SDK15。lit 的单条编译加链接命令通过 `-nobuiltininc` 和显式 intrinsic include 保持这两个阶段的头文件选择，避免 SDK15 与 LLVM21 的 stdint.h include guard 冲突。包含 cstdint、cstddef、vector、arm_neon 的普通分步命令与 lit 合并命令预处理结果逐字节一致。历史 compileWithClang helper 在编译期也选 resource15，与本轮分开统计。
+
+`compiler-rt/test/ohos.cfg.py` 接入 SDK runtime 测试。site 文件加载该配置，`OHOS_COMPILER_RT_CONFIG` 指向 CMake 生成的 lit.common.configured，`OHOS_TEST_SUITE` 选择 asan、tsan、hwasan、ubsan、ubsan_minimal、profile、cfi、scudo、fuzzer、gwp_asan、lsan、shadowcallstack、sanitizer_common。默认 O3，保留用例显式优化选项。设置 `OHOS_TEST_CC`、`OHOS_TEST_TOOLS` 可以对照 SDK15。不重新编译 LLVM21 runtime 冒充 SDK/ROM 兼容。
+
+`ohos-process.c` 在设备 waitpid，保留退出码和真实信号区别；`hdc.py` 可回传测试生成的数据、转发指定环境、按固定每例目录映射编译时嵌入路径，并以 host 原 ELF 还原设备回溯的源码位置。原始设备输出另存；不替换功能断言。远端跨 RUN 数据先回收到 host，再发送到相同路径，临时目录最终清理。
+
+`openmp/runtime/test/ohos.cfg.py` 使用 SDK 静态 libomp 和 ROM libc++；不部署 libomp.so。`llvm/test/ohos-execution.cfg.py` 将 lli、llvm-jitlink、llvm-rtdyld 放到真机，IR 准备和 FileCheck 留在 host，覆盖 ExecutionEngine 及组外直接使用这些执行工具的用例。执行器支持二进制输入、输出顺序、真实信号、文件回传、稳定路径、子工作目录和空结果归档，均有真机契约测试。
+
+判定时区分默认 Kotlin、cinterop/native 依赖和显式诊断插桩。固定分支 OHOS 的 supportedSanitizers 为空；TSan/HWASan 不能标成普通 Kotlin 默认触发。PGO 最小复现已确认 LLVM21 插桩与 SDK15 profile runtime 的数据不兼容，使用 llvm-profdata15 也不能恢复；默认 Kotlin 不启用这条插桩路径。
+
+
+### 运行证据与 host 工具边界
+
+profile 测试通过 `GCOV_PREFIX/GCOV_PREFIX_STRIP` 将编译时嵌入的 host gcda 路径映射到本例设备目录；TMPDIR、profile 模式和 value profiling 环境变量显式转发。生成数据回传后再由 host 工具检查，不在 host 直接运行目标 ELF。CFI 的 `ohos-sanstats.py` 只在临时副本中映射统计文件内的模块文件名，地址及计数原样保留，原始设备文件不修改。设备输出中的栈帧及 CFI note 使用对应 host ELF 符号化，原输出另存。
+
+设备生成的绝对符号链接只有指向本例工作目录时才映射成 host 内部相对链接，解包仍使用安全路径检查。readlink/readlinkat 的断言在设备完成，回传过程不能制造假失败。LLVM remote MCJIT 测试显式传递目标 lli-child-target；遗漏子进程参数导致的早期失败不能用 XFAIL 掩盖。
+
+libc++ 的 host GDB pretty-printer 自测不会直接在 x86 host 启动 OHOS ELF，因此不提供 `host-has-gdb-with-python` feature。warnings 自测、空 RUN 自测和其他编译检查与 ROM 运行结果分开。15 对照替换编译器及对应 profile 工具，保持 SDK、ROM 和固定链接器一致；它不是另一次完整 LLVM15 工具链质量测试。
+
+PGO 代表例 binary-id-padding 的 Clang21 产物在真机以 SIGSEGV 退出，Clang15 产物退出 0；额外信号定位探针得到 PC 位于 SDK15 `initializeValueProfRuntimeRecord`、LR 位于 `writeOneValueProfData`。LLVM21 profile 记录新增 BitmapPtr/NumBitmapBytes，与旧 runtime 布局不兼容。最小 raw profile 即使用 profdata15 也无法正确读取，不是仅换 host 工具版本就可解决。
+
+
+OpenMP 的内部跳过与 lit 的 PASS 分开：均匀拓扑要求不适用于此异构 CPU，部分原子专用测试在 AArch64 直接跳过。kmp-affinity 在21 O3实际执行时发现 libomp 的12个单CPU place 与 sysfs 的8个 core 不同；15 O3提前调用 omp_get_place_num，引起线程绑定，随后全CPU掩码检查跳过。15 O0保留原检查顺序，实机复现相同拓扑差异。因此15 O3的退出0不能作为该功能已通过的证据，也不能将此差异直接归为21独有回归。
+
+`profile/Posix/instrprof-dlopen-norpath.test` 内部通过 system 调用 llvm-profdata，需要同版本的目标工具。设置 `OHOS_TEST_TOOL_DIR` 指向预先部署的 AArch64 llvm-profdata 目录后才提供该 feature；部署的是检查工具，不是替换 ROM runtime。本轮 LLVM21 版本已构建并部署，目标测试真实 SIGSEGV；15 对照未部署同版本目标工具，明确标为前提缺失，不把历史 host 执行错误算作15失败。
+
+sanitizer 日志测试回传 `sanitizer.log.*.txt`。suffix-log-path 的额外设备探针确认日志选项及映射路径正确，但 SDK15 runtime 仍将栈输出到 stderr、未生成指定日志，两套编译器相同；保留失败并旁置，不能靠更改 FileCheck 输入伪装通过。

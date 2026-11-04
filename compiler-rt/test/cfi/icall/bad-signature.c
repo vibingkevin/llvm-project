@@ -1,11 +1,11 @@
 // RUN: %clang -o %t1 %s
-// RUN: %t1 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %run %t1 2>&1 | FileCheck --check-prefix=NCFI %s
 
 // RUN: %clang_cfi -o %t2 %s
-// RUN: %expect_crash %t2 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %run %t2 2>&1 | FileCheck --check-prefix=CFI %s
 
 // RUN: %clang_cfi_diag -g -o %t3 %s
-// RUN: %t3 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
+// RUN: %run %t3 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
 
 #include <stdio.h>
 

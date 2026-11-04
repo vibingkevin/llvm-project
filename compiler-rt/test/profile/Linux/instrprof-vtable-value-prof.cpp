@@ -8,7 +8,7 @@
 // RUN: rm -rf %t && mkdir %t && split-file %s %t && cd %t
 
 // RUN: %clangxx_pgogen -fuse-ld=lld -O2 -fprofile-generate=. -mllvm -enable-vtable-value-profiling lib.cpp main.cpp -o test
-// RUN: env LLVM_PROFILE_FILE=test.profraw ./test
+// RUN: env LLVM_PROFILE_FILE=test.profraw %run ./test
 
 // Show vtable profiles from raw profile.
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables test.profraw | FileCheck %s --check-prefixes=COMMON,RAW

@@ -1,6 +1,6 @@
 // RUN: %clangxx_cfi_dso -DSHARED_LIB -fPIC -g -fsanitize-stats -shared -o %t.so %s
 // RUN: %clangxx_cfi_dso -g -fsanitize-stats -o %t %s %t.so
-// RUN: env SANITIZER_STATS_PATH=%t.stats %t
+// RUN: env SANITIZER_STATS_PATH=%t.stats %run %t
 // RUN: sanstats %t.stats | FileCheck %s
 
 // CFI-icall is not implemented in thinlto mode => ".cfi" suffixes are missing

@@ -2,12 +2,12 @@
 // RUN: %clangxx -std=c++11 -g -DSHARED_LIB %s -fPIC -shared -o %t-nocfi-so.so
 // RUN: %clangxx_cfi_dso -std=c++11 -g %s -o %t
 
-// RUN: %expect_crash %t start 2>&1 | FileCheck %s
-// RUN: %expect_crash %t mmap 2>&1 | FileCheck %s
-// RUN: %expect_crash %t dlopen %t-cfi-so.so 2>&1 | FileCheck %s
-// RUN: %expect_crash %t dlclose %t-cfi-so.so 2>&1 | FileCheck %s
-// RUN: %expect_crash %t dlopen %t-nocfi-so.so 2>&1 | FileCheck %s
-// RUN: %expect_crash %t dlclose %t-nocfi-so.so 2>&1 | FileCheck %s
+// RUN: %expect_crash %run %t start 2>&1 | FileCheck %s
+// RUN: %expect_crash %run %t mmap 2>&1 | FileCheck %s
+// RUN: %expect_crash %run %t dlopen %t-cfi-so.so 2>&1 | FileCheck %s
+// RUN: %expect_crash %run %t dlclose %t-cfi-so.so 2>&1 | FileCheck %s
+// RUN: %expect_crash %run %t dlopen %t-nocfi-so.so 2>&1 | FileCheck %s
+// RUN: %expect_crash %run %t dlclose %t-nocfi-so.so 2>&1 | FileCheck %s
 
 // Tests that shadow is read-only most of the time.
 // REQUIRES: cxxabi
